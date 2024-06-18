@@ -1,0 +1,63 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Release build for TestFlight"
+  lane :testflight_lane do
+    # add actions here: https://docs.fastlane.tools/actions
+    #increment_version_number(bump_type: "patch")
+
+    #commit_version_bump
+    #push_to_git_remote
+    cert
+    sigh(
+      adhoc: false,
+      force: true
+    )
+    # increment_build_number
+    gym(
+        configuration: "Release",
+        export_method: "app-store",
+        clean: true,
+        output_name: "payeer#{ENV['CI_JOB_ID']}.ipa"
+    )
+    
+    upload_to_testflight(
+        skip_submission: true,
+        skip_waiting_for_build_processing: false,
+        username: "test@test.com",
+        app_identifier: "payeer.com",
+        itc_provider: "QWERTY123"
+    )
+  end
+  
+  desc "Release build for Beta"
+  lane :beta do
+    # build your iOS app
+    cert
+    sigh(
+        adhoc: true,
+        provisioning_name: "test.com AdHoc",
+        ignore_profiles_with_different_name: true,
+        force: true
+    )   
+
+    increment_build_number(build_number: ENV['CI_JOB_ID'])
+    #increment_build_number(xcodeproj: "myApplication.xcodeproj")    
+    gym(
+        clean: true,
+        export_method: "ad-hoc",
+        export_options: {iCloudContainerEnvironment: "Production"},
+        output_name: "payeer#{ENV['CI_JOB_ID']}.ipa"        
+    )
+
+    firebase_app_distribution(
+        app: "",
+        groups: "payeer-testers",
+        release_notes: "Lots of amazing new features to test out!",
+        firebase_cli_path: "/usr/local/bin/firebase",
+        firebase_cli_token: "",
+        debug: true        
+    )
+  end
+end
+
